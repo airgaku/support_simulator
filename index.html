@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>できない？を読み解く 支援シミュレーター</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --line: #d9e0e7;
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --green: #22c55e;
+    --yellow: #facc15;
+    --red: #ef4444;
+    --safe: #14b8a6;
+    --join: #6366f1;
+    --understand: #f97316;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 18px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 920px;
+  }
+
+  .screen {
+    display: none;
+    animation: fadeIn 0.35s ease;
+  }
+
+  .screen.active {
+    display: block;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: clamp(20px, 4vw, 36px);
+    box-shadow: 0 16px 36px rgba(31, 41, 55, 0.08);
+  }
+
+  h1, h2, h3, p {
+    margin-top: 0;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 6vw, 4rem);
+    line-height: 1.08;
+    letter-spacing: 0;
+    margin-bottom: 14px;
+  }
+
+  h2 {
+    font-size: clamp(1.45rem, 4vw, 2.2rem);
+    line-height: 1.25;
+    margin-bottom: 18px;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    font-size: clamp(1rem, 2.5vw, 1.35rem);
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  .lead {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #374151;
+  }
+
+  .button {
+    border: none;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 14px 22px;
+    min-height: 48px;
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+
+  .button:hover,
+  .button:focus-visible {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    outline: none;
+  }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .case-label {
+    font-weight: 800;
+    color: var(--primary-dark);
+  }
+
+  .turn-label {
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .progress {
+    width: 100%;
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary), #14b8a6);
+    transition: width 0.4s ease;
+  }
+
+  .case-text {
+    font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+    line-height: 1.8;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 18px;
+    white-space: pre-line;
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .choice {
+    text-align: left;
+    background: white;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+    min-height: 84px;
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .choice:hover,
+  .choice:focus-visible {
+    border-color: var(--primary);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
+    outline: none;
+  }
+
+  .choice.selected {
+    transform: scale(1.035);
+    animation: pop 0.3s ease;
+  }
+
+  .choice-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: var(--primary-dark);
+    font-weight: 800;
+    margin-right: 8px;
+  }
+
+  .choice-text {
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .meters {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .meter-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    background: #ffffff;
+  }
+
+  .meter-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: 800;
+    margin-bottom: 9px;
+  }
+
+  .meter-track {
+    height: 12px;
+    background: #edf2f7;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    width: 50%;
+    border-radius: 999px;
+    transition: width 0.55s ease;
+  }
+
+  .safe {
+    background: var(--safe);
+  }
+
+  .join {
+    background: var(--join);
+  }
+
+  .understand {
+    background: var(--understand);
+  }
+
+  .feedback {
+    display: none;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-weight: 900;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .feedback.show {
+    display: block;
+  }
+
+  .feedback.match {
+    background: rgba(34, 197, 94, 0.14);
+    color: #166534;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+  }
+
+  .feedback.near {
+    background: rgba(250, 204, 21, 0.2);
+    color: #854d0e;
+    border: 1px solid rgba(250, 204, 21, 0.55);
+  }
+
+  .feedback.miss {
+    background: rgba(239, 68, 68, 0.12);
+    color: #991b1b;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+  }
+
+  .result-list {
+    display: grid;
+    gap: 12px;
+    margin: 18px 0 24px;
+  }
+
+  .result-item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    background: #f8fafc;
+  }
+
+  .score-big {
+    font-size: clamp(2.5rem, 10vw, 5rem);
+    font-weight: 900;
+    line-height: 1;
+    margin: 10px 0;
+    color: var(--primary-dark);
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    font: inherit;
+    margin: 8px 0 22px;
+  }
+
+  ul {
+    padding-left: 1.25rem;
+    line-height: 1.9;
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pop {
+    0% {
+      transform: scale(1);
+    }
+    60% {
+      transform: scale(1.045);
+    }
+    100% {
+      transform: scale(1.035);
+    }
+  }
+
+  @media (max-width: 720px) {
+    body {
+      align-items: flex-start;
+      padding: 12px;
+    }
+
+    .card {
+      padding: 20px;
+    }
+
+    .choices,
+    .meters {
+      grid-template-columns: 1fr;
+    }
+
+    .choice {
+      min-height: 72px;
+    }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <section id="titleScreen" class="screen active">
+    <div class="card">
+      <h1>できない？を読み解く<br>支援シミュレーター</h1>
+      <p class="subtitle">「“できない”は、本当に能力の問題か？」</p>
+      <button class="button" id="toHowTo">はじめる</button>
+    </div>
+  </section>
+
+  <section id="howToScreen" class="screen">
+    <div class="card">
+      <h2>遊び方</h2>
+      <p class="lead">
+        3人の子どもを支援します。<br>
+        1人につき3回対応します。
+      </p>
+      <p class="lead">
+        選択によって<br>
+        ・子どもの安心<br>
+        ・活動参加<br>
+        ・周囲の理解<br>
+        が変化します。
+      </p>
+      <p class="lead"><strong>正解を当てるゲームではありません。</strong></p>
+      <button class="button" id="startGame">ゲーム開始</button>
+    </div>
+  </section>
+
+  <section id="gameScreen" class="screen">
+    <div class="card">
+      <div class="top-row">
+        <div>
+          <div class="case-label" id="caseName"></div>
+          <div class="turn-label" id="turnName"></div>
+        </div>
+        <div class="turn-label" id="totalProgress"></div>
+      </div>
+
+      <div class="progress" aria-label="進捗バー">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <div class="case-text" id="caseText"></div>
+      <div class="feedback" id="feedback"></div>
+
+      <div class="choices" id="choices"></div>
+
+      <div class="meters">
+        <div class="meter-card">
+          <div class="meter-head">
+            <span>子どもの安心</span>
+            <span id="safeValue">50</span>
+          </div>
+          <div class="meter-track"><div class="meter-fill safe" id="safeMeter"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-head">
+            <span>活動参加</span>
+            <span id="joinValue">50</span>
+          </div>
+          <div class="meter-track"><div class="meter-fill join" id="joinMeter"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-head">
+            <span>周囲の理解</span>
+            <span id="understandValue">50</span>
+          </div>
+          <div class="meter-track"><div class="meter-fill understand" id="understandMeter"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="caseResultScreen" class="screen">
+    <div class="card">
+      <h2 id="caseResultTitle"></h2>
+      <div class="meters">
+        <div class="meter-card">
+          <div class="meter-head">
+            <span>子どもの安心</span>
+            <span id="resultSafeValue"></span>
+          </div>
+          <div class="meter-track"><div class="meter-fill safe" id="resultSafeMeter"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-head">
+            <span>活動参加</span>
+            <span id="resultJoinValue"></span>
+          </div>
+          <div class="meter-track"><div class="meter-fill join" id="resultJoinMeter"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-head">
+            <span>周囲の理解</span>
+            <span id="resultUnderstandValue"></span>
+          </div>
+          <div class="meter-track"><div class="meter-fill understand" id="resultUnderstandMeter"></div></div>
+        </div>
+      </div>
+      <div class="result-list" id="caseComments"></div>
+      <button class="button" id="nextCase">次の子へ</button>
+    </div>
+  </section>
+
+  <section id="finalScreen" class="screen">
+    <div class="card">
+      <h2>最終結果</h2>
+      <p class="muted">総得点</p>
+      <div class="score-big"><span id="finalScore"></span>/18</div>
+      <p><strong>9ターンの合計：</strong><span id="turnTotal"></span>点</p>
+      <p><strong>診断タイプ：</strong><span id="diagnosis"></span></p>
+
+      <h3>3人の結果一覧</h3>
+      <div class="result-list" id="allResults"></div>
+
+      <h3>リフレクション</h3>
+      <label for="reflection">今日、まだ納得できないことは？</label>
+      <textarea id="reflection" placeholder="考えたことを自由に書いてください"></textarea>
+
+      <button class="button" id="restart">もう一度やる</button>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ケースデータは配列で管理する。
+  const cases = [
+    {
+      name: "Case1：Aさん",
+      person: "Aさん",
+      theme: "一度に言われると動けない",
+      turns: [
+        {
+          text: "5歳児Aさん。\n\n先生が\n\n「カバンをしまって、座って、待ってね」\n\nと伝えると止まってしまいました。",
+          choices: [
+            { key: "A", text: "同じ説明を繰り返す", type: "miss", delta: [-10, -5, 0] },
+            { key: "B", text: "1つずつ区切って伝える", type: "match", delta: [15, 15, 5] },
+            { key: "C", text: "友達に連れて行ってもらう", type: "near", delta: [5, 10, -5] },
+            { key: "D", text: "別室で待たせる", type: "near", delta: [5, -10, -5] }
+          ]
+        },
+        {
+          text: "Aさんは1つ目はできましたが、\n\n次の行動で止まりました。",
+          choices: [
+            { key: "A", text: "絵カードを追加", type: "match", delta: [15, 10, 5] },
+            { key: "B", text: "急かす", type: "miss", delta: [-15, -10, -5] },
+            { key: "C", text: "手をつないで連れていく", type: "near", delta: [5, 5, -5] },
+            { key: "D", text: "そのまま様子を見る", type: "near", delta: [0, -5, 0] }
+          ]
+        },
+        {
+          text: "Aさんは少し動けるようになりました。\n\n今度は主体性を育てたい。",
+          choices: [
+            { key: "A", text: "次を自分で選ばせる", type: "match", delta: [15, 10, 10] },
+            { key: "B", text: "全部指示する", type: "near", delta: [5, 5, -5] },
+            { key: "C", text: "友達に任せる", type: "near", delta: [5, 10, -5] },
+            { key: "D", text: "失敗しないよう止める", type: "miss", delta: [-10, -10, -10] }
+          ]
+        }
+      ]
+    },
+    {
+      name: "Case2：Bさん",
+      person: "Bさん",
+      theme: "ジャンケンがわからない",
+      turns: [
+        {
+          text: "ジャンケンで負けると泣く。",
+          choices: [
+            { key: "A", text: "毎回勝たせる", type: "miss", delta: [5, 5, -15] },
+            { key: "B", text: "絵カードで説明", type: "match", delta: [15, 15, 10] },
+            { key: "C", text: "友達に我慢してもらう", type: "near", delta: [5, 0, -5] },
+            { key: "D", text: "別遊びにする", type: "near", delta: [10, -10, 0] }
+          ]
+        },
+        {
+          text: "ルール練習",
+          choices: [
+            { key: "A", text: "少人数で練習", type: "match", delta: [15, 10, 10] },
+            { key: "B", text: "一人で練習", type: "near", delta: [5, 5, -5] },
+            { key: "C", text: "やめさせる", type: "miss", delta: [-15, -15, -5] },
+            { key: "D", text: "見学のみ", type: "near", delta: [5, 0, 0] }
+          ]
+        },
+        {
+          text: "友達との関係づくり",
+          choices: [
+            { key: "A", text: "勝ち負け以外の遊びも提案", type: "match", delta: [15, 15, 10] },
+            { key: "B", text: "友達に説明だけする", type: "near", delta: [5, 0, 5] },
+            { key: "C", text: "Bさんを外す", type: "miss", delta: [-15, -15, -15] },
+            { key: "D", text: "そのまま見守る", type: "near", delta: [0, 0, 0] }
+          ]
+        }
+      ]
+    },
+    {
+      name: "Case3：Cさん",
+      person: "Cさん",
+      theme: "支援すれば必ずできる？",
+      turns: [
+        {
+          text: "買い物ごっこが難しい",
+          choices: [
+            { key: "A", text: "手順を分ける", type: "match", delta: [15, 10, 5] },
+            { key: "B", text: "全部一緒にやる", type: "near", delta: [10, 5, 0] },
+            { key: "C", text: "向いてないと判断", type: "miss", delta: [-15, -15, -5] },
+            { key: "D", text: "一部参加にする", type: "match", delta: [15, 15, 10] }
+          ]
+        },
+        {
+          text: "まだ難しい",
+          choices: [
+            { key: "A", text: "目標を小さくする", type: "match", delta: [15, 10, 5] },
+            { key: "B", text: "同じことを続ける", type: "near", delta: [0, 0, 0] },
+            { key: "C", text: "やめる", type: "miss", delta: [-15, -15, -10] },
+            { key: "D", text: "本人に選ばせる", type: "match", delta: [15, 10, 10] }
+          ]
+        },
+        {
+          text: "主体性支援",
+          choices: [
+            { key: "A", text: "自分で選ばせる", type: "match", delta: [15, 15, 10] },
+            { key: "B", text: "全部教師が決める", type: "near", delta: [5, 0, -5] },
+            { key: "C", text: "危ないから参加停止", type: "miss", delta: [-15, -15, -15] },
+            { key: "D", text: "友達と役割分担", type: "match", delta: [10, 15, 10] }
+          ]
+        }
+      ]
+    }
+  ];
+
+  const scoreMap = {
+    match: 2,
+    near: 1,
+    miss: 0
+  };
+
+  const feedbackMap = {
+    match: { text: "いいですね！", className: "match" },
+    near: { text: "おしい！", className: "near" },
+    miss: { text: "注目してみよう！", className: "miss" }
+  };
+
+  let currentCaseIndex = 0;
+  let currentTurnIndex = 0;
+  let totalScore = 0;
+  let parameters = [50, 50, 50];
+  let caseResults = [];
+  let locked = false;
+
+  const screens = {
+    title: document.getElementById("titleScreen"),
+    howTo: document.getElementById("howToScreen"),
+    game: document.getElementById("gameScreen"),
+    caseResult: document.getElementById("caseResultScreen"),
+    final: document.getElementById("finalScreen")
+  };
+
+  const caseName = document.getElementById("caseName");
+  const turnName = document.getElementById("turnName");
+  const totalProgress = document.getElementById("totalProgress");
+  const progressBar = document.getElementById("progressBar");
+  const caseText = document.getElementById("caseText");
+  const choices = document.getElementById("choices");
+  const feedback = document.getElementById("feedback");
+
+  function showScreen(name) {
+    Object.values(screens).forEach(screen => screen.classList.remove("active"));
+    screens[name].classList.add("active");
+  }
+
+  function clamp(value) {
+    return Math.max(0, Math.min(100, value));
+  }
+
+  function updateMeters(prefix = "") {
+    const ids = prefix
+      ? ["resultSafe", "resultJoin", "resultUnderstand"]
+      : ["safe", "join", "understand"];
+
+    ids.forEach((id, index) => {
+      document.getElementById(`${id}Value`).textContent = parameters[index];
+      document.getElementById(`${id}Meter`).style.width = `${parameters[index]}%`;
+    });
+  }
+
+  function resetCaseParameters() {
+    parameters = [50, 50, 50];
+  }
+
+  function renderTurn() {
+    locked = false;
+    const currentCase = cases[currentCaseIndex];
+    const currentTurn = currentCase.turns[currentTurnIndex];
+    const globalTurn = currentCaseIndex * 3 + currentTurnIndex + 1;
+
+    caseName.textContent = `${currentCase.name}　テーマ：${currentCase.theme}`;
+    turnName.textContent = `Turn${currentTurnIndex + 1}`;
+    totalProgress.textContent = `${globalTurn}/9ターン`;
+    progressBar.style.width = `${(globalTurn - 1) / 9 * 100}%`;
+    caseText.textContent = currentTurn.text;
+
+    feedback.className = "feedback";
+    feedback.textContent = "";
+
+    choices.innerHTML = "";
+    currentTurn.choices.forEach(choice => {
+      const button = document.createElement("button");
+      button.className = "choice";
+      button.type = "button";
+      button.innerHTML = `
+        <span class="choice-key">${choice.key}</span>
+        <span class="choice-text">${choice.text}</span>
+      `;
+      button.addEventListener("click", () => selectChoice(choice, button));
+      choices.appendChild(button);
+    });
+
+    updateMeters();
+  }
+
+  function selectChoice(choice, button) {
+    if (locked) return;
+    locked = true;
+
+    button.classList.add("selected");
+    totalScore += scoreMap[choice.type];
+
+    parameters = parameters.map((value, index) => clamp(value + choice.delta[index]));
+    updateMeters();
+
+    const feedbackData = feedbackMap[choice.type];
+    feedback.textContent = feedbackData.text;
+    feedback.className = `feedback show ${feedbackData.className}`;
+
+    progressBar.style.width = `${(currentCaseIndex * 3 + currentTurnIndex + 1) / 9 * 100}%`;
+
+    setTimeout(() => {
+      currentTurnIndex++;
+      if (currentTurnIndex >= 3) {
+        showCaseResult();
+      } else {
+        renderTurn();
+      }
+    }, 950);
+  }
+
+  function buildCaseComments(values) {
+    const comments = [];
+
+    if (values[0] >= 80) comments.push("安心して参加しやすくなってきました");
+    if (values[1] >= 80) comments.push("活動への主体的参加が増えています");
+    if (values[2] >= 80) comments.push("周囲との関係が広がっています");
+
+    if (comments.length === 0) {
+      comments.push("今はまだ揺れのある状態です。背景を観察しながら、安心・参加・関係のどこを支えるか考えてみましょう。");
+    }
+
+    return comments;
+  }
+
+  function showCaseResult() {
+    const currentCase = cases[currentCaseIndex];
+    const stored = {
+      person: currentCase.person,
+      values: [...parameters],
+      comments: buildCaseComments(parameters)
+    };
+
+    caseResults.push(stored);
+
+    document.getElementById("caseResultTitle").textContent = `${currentCase.person}の支援結果`;
+    updateMeters("result");
+
+    const commentArea = document.getElementById("caseComments");
+    commentArea.innerHTML = "";
+    stored.comments.forEach(comment => {
+      const item = document.createElement("div");
+      item.className = "result-item";
+      item.textContent = comment;
+      commentArea.appendChild(item);
+    });
+
+    const nextButton = document.getElementById("nextCase");
+    nextButton.textContent = currentCaseIndex === cases.length - 1 ? "最終結果へ" : "次の子へ";
+
+    showScreen("caseResult");
+  }
+
+  function showFinalResult() {
+    document.getElementById("finalScore").textContent = totalScore;
+    document.getElementById("turnTotal").textContent = totalScore;
+    document.getElementById("diagnosis").textContent = getDiagnosis(totalScore);
+
+    const allResults = document.getElementById("allResults");
+    allResults.innerHTML = "";
+
+    caseResults.forEach(result => {
+      const item = document.createElement("div");
+      item.className = "result-item";
+      item.innerHTML = `
+        <strong>${result.person}</strong><br>
+        子どもの安心：${result.values[0]}　
+        活動参加：${result.values[1]}　
+        周囲の理解：${result.values[2]}<br>
+        <span class="muted">${result.comments.join(" / ")}</span>
+      `;
+      allResults.appendChild(item);
+    });
+
+    showScreen("final");
+  }
+
+  function getDiagnosis(score) {
+    if (score >= 15) return "支援改善クリエイタータイプ";
+    if (score >= 10) return "教室全体を見るファシリテータータイプ";
+    if (score >= 5) return "現場バランス調整タイプ";
+    return "これから観察スタートタイプ";
+  }
+
+  function startNewGame() {
+    currentCaseIndex = 0;
+    currentTurnIndex = 0;
+    totalScore = 0;
+    caseResults = [];
+    resetCaseParameters();
+    document.getElementById("reflection").value = "";
+    renderTurn();
+    showScreen("game");
+  }
+
+  document.getElementById("toHowTo").addEventListener("click", () => showScreen("howTo"));
+  document.getElementById("startGame").addEventListener("click", startNewGame);
+
+  document.getElementById("nextCase").addEventListener("click", () => {
+    currentCaseIndex++;
+    if (currentCaseIndex >= cases.length) {
+      showFinalResult();
+    } else {
+      currentTurnIndex = 0;
+      resetCaseParameters();
+      renderTurn();
+      showScreen("game");
+    }
+  });
+
+  document.getElementById("restart").addEventListener("click", startNewGame);
+</script>
+</body>
+</html>
